@@ -6,15 +6,27 @@ namespace asmint
     {
         static void Main(string[] args)
         {
+            ProgramFile t = new ProgramFile("test.asm");
+            CPU cpu = new CPU();
+            /*
+            //mov ax, 1
+            Instruction mov = new Instruction(enum_op_code.mov, enum_op_type.register, (byte)enum_register.ax, enum_op_type.constant, 2);
+            //push ax
+            Instruction mov2 = new Instruction(enum_op_code.push, enum_op_type.register, (byte)enum_register.ax, enum_op_type.empty, 0);
             
-            Console.WriteLine("Hello World!");
-            byte x = 128;
-            byte y = 128;
+            t.instructions.Add(mov);
+            t.instructions.Add(mov2);
 
-            Console.WriteLine(x);
-            Console.WriteLine(y);
-            int z = (byte)(x | y);
-            Console.WriteLine(z);
+            t.Write();
+            */
+            t.Read();
+
+            foreach(Instruction i in t.instructions)
+            {
+                cpu.LoadInstructionToMemory(i);
+            }
+            cpu.RunNextInstruction();
+            cpu.RunNextInstruction();
         }
     }
 }
