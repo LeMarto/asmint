@@ -6,10 +6,11 @@ namespace asmint
     {
          ax, bx, cx, dx,
          sp, ss, /*Stack*/
-         bp, bs, /*Base*/
+         bp, /*Base*/
          si, di,
          ip, cs, /*Code*/
-         ds, es,
+         ds, /*Data Segment*/
+         es,
          fs, gs, flags
     }
     public enum enum_op_type
@@ -144,7 +145,7 @@ namespace asmint
             registers[(int)enum_register.cs] = 0;
             registers[(int)enum_register.ss] = 255;
             registers[(int)enum_register.sp] = 255;
-            registers[(int)enum_register.bs] = 10;  //Temporary
+            registers[(int)enum_register.ds] = 10;  //Temporary
         }
         public void RunNextInstruction()
         {
@@ -156,8 +157,8 @@ namespace asmint
             int ss = registers[(int)enum_register.ss];
             //Get the Stack Pointer value
             int sp = registers[(int)enum_register.sp];
-            //Get the Base Segment value
-            int bs = registers[(int)enum_register.bs];
+            //Get the Default Segment value
+            int ds = registers[(int)enum_register.ds];
 
             //Store in a byte array the 32 bits instruction to be executed
             byte[] instruction_chunk = 
@@ -188,7 +189,7 @@ namespace asmint
                             value = registers[instruction.op2];
                             break;
                         case enum_op_type.memory_address:
-                            value = memory[bs,(int)instruction.op2];
+                            value = memory[ds,(int)instruction.op2];
                             break;
                     }
 
@@ -198,7 +199,7 @@ namespace asmint
                             registers[(int)instruction.op1] = value;
                             break;
                         case enum_op_type.memory_address:
-                            memory[bs, (int)instruction.op1] = value;
+                            memory[ds, (int)instruction.op1] = value;
                             break;
                     }
                     break;
@@ -215,7 +216,7 @@ namespace asmint
                             value = registers[instruction.op1];
                             break;
                         case enum_op_type.memory_address:
-                            value = memory[bs, (int)instruction.op1];
+                            value = memory[ds, (int)instruction.op1];
                             break;
                     }
 
