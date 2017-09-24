@@ -4,7 +4,13 @@ namespace asmint
 {
     public enum enum_register
     {
-         ax, bx, cx, dx, sp, bp, si, di, ip, cs, ds, es, fs, gs, ss, flags
+         ax, bx, cx, dx,
+         sp, ss, /*Stack*/
+         bp, bs, /*Base*/
+         si, di,
+         ip, cs, /*Code*/
+         ds, es,
+         fs, gs, flags
     }
     public enum enum_op_type
     {
@@ -19,22 +25,7 @@ namespace asmint
     {
         mov,
         push,
-        pop,
-        add,
-        inc,
-        sub,
-        dec,
-        mul,
-        div,
-        not,
-        and,
-        or,
-        shl,
-        shr,
-        xor,
-        jmp,
-        jc,
-        jz
+        pop
     }
     public class Instruction
     {
@@ -123,8 +114,8 @@ namespace asmint
             unused3=64,
             unused4=128
         }
-        public byte[] registers = new byte[255];
-        public byte[,] memory = new byte[255,255];
+        public byte[] registers = new byte[256];
+        public byte[,] memory = new byte[256,256];
         private byte lip=0; //load instruction pointer.
         private byte lis=0; //load instruction segment
 
@@ -153,12 +144,22 @@ namespace asmint
             registers[(int)enum_register.cs] = 0;
             registers[(int)enum_register.ss] = 255;
             registers[(int)enum_register.sp] = 255;
+            registers[(int)enum_register.bs] = 10;  //Temporary
         }
         public void RunNextInstruction()
         {
+            //Get Code Segment value
             int cs = registers[(int)enum_register.cs];
+            //Get Instruction Pointer value
             int ip = registers[(int)enum_register.ip];
-            
+            //Get the Stack Segment value
+            int ss = registers[(int)enum_register.ss];
+            //Get the Stack Pointer value
+            int sp = registers[(int)enum_register.sp];
+            //Get the Base Segment value
+            int bs = registers[(int)enum_register.bs];
+
+            //Store in a byte array the 32 bits instruction to be executed
             byte[] instruction_chunk = 
             {
                 memory[cs,ip],
@@ -167,13 +168,17 @@ namespace asmint
                 memory[cs,ip+3],
             };
 
+            //Create instruction object
             Instruction instruction = new Instruction(instruction_chunk);
+
+            //Where well store temporally te value to manipulate
             byte value=0;
 
             switch (instruction.op_code)
             {
+                //MOV operation
                 case enum_op_code.mov:
-
+                    /*Use Base segment for memory operations! */
                     switch(instruction.op2_type)
                     {
                         case enum_op_type.constant:
@@ -183,7 +188,7 @@ namespace asmint
                             value = registers[instruction.op2];
                             break;
                         case enum_op_type.memory_address:
-                            value = memory[(int)registers[(int)enum_register.cs],(int)instruction.op2];
+                            value = memory[bs,(int)instruction.op2];
                             break;
                     }
 
@@ -193,12 +198,14 @@ namespace asmint
                             registers[(int)instruction.op1] = value;
                             break;
                         case enum_op_type.memory_address:
-                            memory[(int)registers[(int)enum_register.cs], (int)instruction.op1] = value;
+                            memory[bs, (int)instruction.op1] = value;
                             break;
                     }
                     break;
-
+                
+                //PUSH operation
                 case enum_op_code.push:
+                    /*Use Base segment for memory operations! */
                     switch(instruction.op1_type)
                     {
                         case enum_op_type.constant:
@@ -208,22 +215,27 @@ namespace asmint
                             value = registers[instruction.op1];
                             break;
                         case enum_op_type.memory_address:
-                            value = memory[(int)registers[(int)enum_register.cs],(int)instruction.op1];
+                            value = memory[bs, (int)instruction.op1];
                             break;
                     }
-                    
-                    memory[(int)registers[(int)enum_register.ss], (int)registers[(int)enum_register.sp]] = value;
 
-                    registers[(int)enum_register.sp] -= 1;
-                    if (registers[(int)enum_register.sp] < 0)
+                    memory[ss, sp] = value;
+
+                    sp -= 1;
+                    if (sp < 0)
                     {
-                        registers[(int)enum_register.ss]--;
-                        registers[(int)enum_register.sp] = 0;
-                        //guarda aca, verificar que no sobreescriba codigo...
+                        if (ss == 0)
+                        {
+                            Console.WriteLine("Out of memory!");
+                            return;
+                        }
+                        ss--;
+                        sp = 0;
                     }
                     break;
             }
 
+            //Increment the instruction pointer
             ip += 4;
             if (ip > 255)
             {
@@ -234,8 +246,11 @@ namespace asmint
                     Console.WriteLine("Error! Out of Memory!");
             }
 
+            //Update the registers
             registers[(int)enum_register.ip] = (byte)ip;
-            registers[(int)enum_register.cs] = (byte)cs; 
+            registers[(int)enum_register.cs] = (byte)cs;
+            registers[(int)enum_register.sp] = (byte)sp;
+            registers[(int)enum_register.ss] = (byte)ss; 
         }
 
     }
