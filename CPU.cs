@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace asmint
 {
@@ -117,9 +118,41 @@ namespace asmint
         }
         public byte[] registers = new byte[256];
         public byte[,] memory = new byte[256,256];
-        private byte lip=0; //load instruction pointer.
-        private byte lis=0; //load instruction segment
+        private byte lip=255; //load instruction pointer.
+        private byte lis=255; //load instruction segment
 
+        public void LoadProgram(List<Instruction> program)
+        {
+            lip=255;
+            lis=255;
+            int ic = 3; 
+
+            for (int i=0; i< program.Count; i++)
+            {
+                for(int j=0; j<ic; j++)
+                {
+                    lip -= 1;
+                    if (lip < 0)
+                    {
+                        lip = 255;
+                        lis--;
+                        if (lis < 0)
+                        {
+                            Console.WriteLine("Error: Out of memory while loading program");
+                        }
+                    }
+                }
+                ic=4;
+            }
+
+            registers[(int)enum_register.ip] = lip;
+            registers[(int)enum_register.cs] = lis;
+            
+            foreach(Instruction i in program)
+            {
+                this.LoadInstructionToMemory(i);
+            }
+        }
         public void LoadInstructionToMemory(Instruction ins)
         {
             memory[lis,lip] = ins.code;
@@ -134,7 +167,7 @@ namespace asmint
                 lis +=1;
 
                 if (lis > 255)
-                    Console.WriteLine("Error! Out of Memory!");
+                Console.WriteLine("Error! Out of Memory!");
             }
         }
         public CPU()
@@ -143,8 +176,8 @@ namespace asmint
             
             registers[(int)enum_register.ip] = 0;
             registers[(int)enum_register.cs] = 0;
-            registers[(int)enum_register.ss] = 255;
-            registers[(int)enum_register.sp] = 255;
+            registers[(int)enum_register.ss] = 0;
+            registers[(int)enum_register.sp] = 0;
             registers[(int)enum_register.ds] = 10;  //Temporary
         }
         public void RunNextInstruction()
@@ -222,29 +255,61 @@ namespace asmint
 
                     memory[ss, sp] = value;
 
-                    sp -= 1;
-                    if (sp < 0)
+                    sp++;
+                    if (sp > 255)
                     {
-                        if (ss == 0)
+                        sp = 0;
+                        ss++;
+                        if (ss > 255)
                         {
                             Console.WriteLine("Out of memory!");
                             return;
                         }
+                    }
+                    break;
+                
+                //POP operation
+                case enum_op_code.pop:
+
+                    memory[ss, sp] = value;
+                
+                    /*Use Base segment for memory operations! */
+                    switch(instruction.op1_type)
+                    {
+                        case enum_op_type.register:
+                            registers[instruction.op1] = value;
+                            break;
+                        case enum_op_type.memory_address:
+                            memory[ds, (int)instruction.op1] = value;
+                            break;
+                    }
+
+                    sp--;
+                    if (sp == 0)
+                    {
+                        sp = 255;
                         ss--;
-                        sp = 0;
+                        if (ss < 0)
+                        {
+                            Console.WriteLine("Nothing on stack!");
+                            return;
+                        }
                     }
                     break;
             }
 
             //Increment the instruction pointer
-            ip += 4;
-            if (ip > 255)
+            for (int i=0; i<4; i++)
             {
-                ip = 0;
-                cs +=1;
+                ip += 1;
+                if (ip > 255)
+                {
+                    ip = 0;
+                    cs +=1;
 
-                if (cs > 255)
-                    Console.WriteLine("Error! Out of Memory!");
+                    if (cs > 255)
+                        Console.WriteLine("Error! Out of Memory!");
+                }
             }
 
             //Update the registers
