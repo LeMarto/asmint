@@ -12,7 +12,7 @@ namespace asmint
          ip, cs, /*Code*/
          ds, /*Data Segment*/
          es,
-         fs, gs, flags
+         fs, gs
     }
     public enum enum_op_type
     {
@@ -20,7 +20,7 @@ namespace asmint
         constant=1,
         register=2,
         memory_address=4,
-        reserved=8
+        register_pointer=8
     }
 
     public enum enum_op_code
@@ -29,79 +29,7 @@ namespace asmint
         push,
         pop
     }
-    public class Instruction
-    {
-
-        /*
-            mov ax, constant        -> set content of register ax to constant value
-            mov ax, register        -> set content of register ax to value of the register
-            mov ax, memory address  -> set content of register ax to value stored at memory address
-
-            mov ff, constant        -> set content of memory address ff to value constant
-            mov ff, register        -> set content of memory address ff to value of the register 
-            mov ff, memory address  -> set content of memory address ff to the content of memory address
-
-            push 1                  -> push to stack the value 1
-            push ax                 -> push to stack the value stored in register ax
-            push ff                 -> push to the stack the value stored in memory address ff
-
-            first 4 bits op1
-            last 4 bits op2
-            0000 0000
-         */
-
-
-        public enum_op_code op_code;
-        public byte code
-        {
-            get
-            {
-                return (byte)op_code; 
-            }
-        }  //opcode
-        public byte meta
-        {
-            get
-            {
-                return (byte) (((byte)op2_type << 4) | (byte)op1_type);
-            } 
-        }        
-        public byte op1;
-        public byte op2;
-        public enum_op_type op1_type = enum_op_type.register;
-        public enum_op_type op2_type = enum_op_type.empty;
-        public Instruction(enum_op_code op_code, enum_op_type op1_type, byte op1, enum_op_type op2_type, byte op2)
-        {
-            /*Constructor to help me manually create instructions*/
-            this.op_code = op_code;
-            this.op1_type = op1_type;
-            this.op1 = op1;
-            this.op2_type = op2_type;
-            this.op2 = op2;
-        }
-        public Instruction(byte op_code, byte meta, byte op1, byte op2)
-        {
-            /*Constructor used to load from file */
-            this.op_code = (enum_op_code)op_code;
-            op1_type = (enum_op_type)((meta << 4) >> 4);
-            op2_type = (enum_op_type)(meta >> 4);
-            this.op1 = op1;
-            this.op2 = op2;
-        }
-
-        public Instruction(byte[] chunk)
-        {
-            // 1010 0010
-            // 1+2+4+8
-            // 0000 1111
-            // 0000 0010
-            this.op_code = (enum_op_code)chunk[0];
-            op1_type = (enum_op_type)(chunk[1] & 15);
-            op2_type = (enum_op_type)(chunk[1] >> 4);
-            this.op1 = chunk[2];
-            this.op2 = chunk[3];
-        }
-    }
+    
     public class CPU
     {
 
@@ -116,8 +44,11 @@ namespace asmint
             unused3=64,
             unused4=128
         }
+        public byte flags;
+        
         public byte[] registers = new byte[256];
         public byte[,] memory = new byte[256,256];
+        public bool[,] memory_readonly = new bool[256,256];
         private byte lip=255; //load instruction pointer.
         private byte lis=255; //load instruction segment
 
@@ -160,20 +91,37 @@ namespace asmint
             memory[lis,lip+2] = ins.op1;
             memory[lis,lip+3] = ins.op2;
             
-            lip += 4;
-            if (lip > 255)
-            {
-                lip = 0;
-                lis +=1;
+            //mark memory as read only            
+            memory_readonly[lis,lip] = true;
+            memory_readonly[lis,lip+1] = true;
+            memory_readonly[lis,lip+2] = true;
+            memory_readonly[lis,lip+3] = true;
 
-                if (lis > 255)
-                Console.WriteLine("Error! Out of Memory!");
+            for(int i=0; i<4; i++)
+            {
+                lip++;
+                if (lip > 255)
+                {
+                    lip = 0;
+                    lis++;
+                    if (lis > 255)
+                        Console.WriteLine("Error! Out of Memory!");
+                }
             }
+
         }
         public CPU()
         {
-            //set code segment and instruction pointer to top of memory
+            //initialize read only memory array
+            for(int i=0; i<256; i++)
+            {
+                for(int j=0;j<256; j++)
+                {
+                    memory_readonly[i,j] = false;
+                }
+            }
             
+            //set code segment and instruction pointer to top of memory
             registers[(int)enum_register.ip] = 0;
             registers[(int)enum_register.cs] = 0;
             registers[(int)enum_register.ss] = 0;
