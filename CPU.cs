@@ -204,7 +204,7 @@ namespace asmint
                             if(memory_readonly[ds, registers[(int)instruction.op1]] == true)
                                 Console.WriteLine("Error: Attempt to write to a read only memory sector");
                             else
-                                memory[ds, registers[(int)instruction.op1]]
+                                memory[ds, registers[(int)instruction.op1]] = value;
                             break;
                     }
                     break;
@@ -240,7 +240,7 @@ namespace asmint
                     }
                     break;
                 
-                //POP op
+                //POP op1
                 case enum_op_code.pop:
 
                     memory[ss, sp] = value;

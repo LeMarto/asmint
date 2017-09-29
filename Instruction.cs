@@ -48,5 +48,10 @@ namespace asmint
             this.op1 = chunk[2];
             this.op2 = chunk[3];
         }
+
+        public override string ToString()
+        {
+            return "blah";
+        }
     }
 }
