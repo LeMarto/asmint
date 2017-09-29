@@ -225,8 +225,6 @@ namespace asmint
                             break;
                     }
 
-                    memory[ss, sp] = value;
-
                     sp++;
                     if (sp > 255)
                     {
@@ -238,12 +236,14 @@ namespace asmint
                             return;
                         }
                     }
+                    memory[ss, sp] = value;
+                    
                     break;
                 
                 //POP op1
                 case enum_op_code.pop:
 
-                    memory[ss, sp] = value;
+                    value = memory[ss, sp];
                 
                     /*Use Base segment for memory operations! */
                     switch(instruction.op1_type)
@@ -257,7 +257,7 @@ namespace asmint
                     }
 
                     sp--;
-                    if (sp == 0)
+                    if (sp < 0)
                     {
                         sp = 255;
                         ss--;
