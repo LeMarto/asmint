@@ -54,10 +54,21 @@ namespace asmint
 
         public void LoadProgram(List<Instruction> program)
         {
+            //Start at the bottom of the memory
             lip=255;
             lis=255;
+            
+            /*
+            magic number. For the first iteration, 
+            i want to consider the current position of memory.
+            */
             int ic = 3; 
 
+            /*
+            Count backwards from the bottom of the memory,
+            moving one position at the time till we arrive
+            at the first instruction.
+             */
             for (int i=0; i< program.Count; i++)
             {
                 for(int j=0; j<ic; j++)
@@ -76,16 +87,19 @@ namespace asmint
                 ic=4;
             }
 
+            //Set the instruction pointer and code segment to the last position
             registers[(int)enum_register.ip] = lip;
             registers[(int)enum_register.cs] = lis;
             
-            foreach(Instruction i in program)
+            //Load all the instructions to memory from the ip onwards
+            foreach(Instruction instr in program)
             {
-                this.LoadInstructionToMemory(i);
+                this.LoadInstructionToMemory(instr);
             }
         }
         public void LoadInstructionToMemory(Instruction ins)
         {
+            //load instruction
             memory[lis,lip] = ins.code;
             memory[lis,lip+1] = ins.meta;
             memory[lis,lip+2] = ins.op1;
@@ -97,6 +111,7 @@ namespace asmint
             memory_readonly[lis,lip+2] = true;
             memory_readonly[lis,lip+3] = true;
 
+            //advance one position at a time
             for(int i=0; i<4; i++)
             {
                 lip++;
@@ -158,9 +173,9 @@ namespace asmint
 
             switch (instruction.op_code)
             {
-                //MOV operation
+                //MOV op1, op2
                 case enum_op_code.mov:
-                    /*Use Base segment for memory operations! */
+                    /*Use Base segment for memory operations!*/
                     switch(instruction.op2_type)
                     {
                         case enum_op_type.constant:
@@ -176,16 +191,25 @@ namespace asmint
 
                     switch(instruction.op1_type)
                     {
-                        case enum_op_type.register:
+                        case enum_op_type.register: //move to a register
                             registers[(int)instruction.op1] = value;
                             break;
-                        case enum_op_type.memory_address:
-                            memory[ds, (int)instruction.op1] = value;
+                        case enum_op_type.memory_address: //move to a memory address
+                            if(memory_readonly[ds, (int)instruction.op1] == true)
+                                Console.WriteLine("Error: Attempt to write to a read only memory sector");
+                            else
+                                memory[ds, (int)instruction.op1] = value;
+                            break;
+                        case enum_op_type.register_pointer: //move to a memory address stored in the following register
+                            if(memory_readonly[ds, registers[(int)instruction.op1]] == true)
+                                Console.WriteLine("Error: Attempt to write to a read only memory sector");
+                            else
+                                memory[ds, registers[(int)instruction.op1]]
                             break;
                     }
                     break;
                 
-                //PUSH operation
+                //PUSH op1
                 case enum_op_code.push:
                     /*Use Base segment for memory operations! */
                     switch(instruction.op1_type)
@@ -216,7 +240,7 @@ namespace asmint
                     }
                     break;
                 
-                //POP operation
+                //POP op
                 case enum_op_code.pop:
 
                     memory[ss, sp] = value;
