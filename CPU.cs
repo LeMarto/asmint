@@ -45,7 +45,7 @@ namespace asmint
             unused4=128
         }
         public byte flags;
-        
+        private bool program_ended = false; //set to true when the program finished.
         public byte[] registers = new byte[256];
         public byte[,] memory = new byte[256,256];
         public bool[,] memory_readonly = new bool[256,256];
@@ -145,6 +145,12 @@ namespace asmint
         }
         public void RunNextInstruction()
         {
+            if (program_ended)
+            {
+                //Do something
+                return;
+            }
+
             //Get Code Segment value
             int cs = registers[(int)enum_register.cs];
             //Get Instruction Pointer value
@@ -268,6 +274,12 @@ namespace asmint
                         }
                     }
                     break;
+            }
+
+            if (cs==255 && ip==252) //Are we at the last instruction of the program?
+            {
+                program_ended = true;
+                return;
             }
 
             //Increment the instruction pointer
