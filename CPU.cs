@@ -202,13 +202,13 @@ namespace asmint
                             break;
                         case enum_op_type.memory_address: //move to a memory address
                             if(memory_readonly[ds, (int)instruction.op1] == true)
-                                Console.WriteLine("Error: Attempt to write to a read only memory sector");
+                                Console.WriteLine("MOV Error: Attempt to write to a read only memory sector");
                             else
                                 memory[ds, (int)instruction.op1] = value;
                             break;
                         case enum_op_type.register_pointer: //move to a memory address stored in the following register
                             if(memory_readonly[ds, registers[(int)instruction.op1]] == true)
-                                Console.WriteLine("Error: Attempt to write to a read only memory sector");
+                                Console.WriteLine("MOV Error: Attempt to write to a read only memory sector");
                             else
                                 memory[ds, registers[(int)instruction.op1]] = value;
                             break;
@@ -238,12 +238,16 @@ namespace asmint
                         ss++;
                         if (ss > 255)
                         {
-                            Console.WriteLine("Out of memory!");
+                            Console.WriteLine("PUSH Error: While trying to increment the stack pointer I arrived to the end of the memory");
                             return;
                         }
                     }
-                    memory[ss, sp] = value;
-                    
+
+                    //If stack pointer points to a read only memory, error out
+                    if(memory_readonly[ss, sp] == true)
+                        Console.WriteLine("PUSH Error: Attempt to write to a read only memory sector");
+                    else
+                        memory[ss, sp] = value;
                     break;
                 
                 //POP op1
@@ -258,8 +262,13 @@ namespace asmint
                             registers[instruction.op1] = value;
                             break;
                         case enum_op_type.memory_address:
-                            memory[ds, (int)instruction.op1] = value;
+                            //Make sure the position we re trying to move is not read only
+                            if(memory_readonly[ds, (int)instruction.op1] == true)
+                                Console.WriteLine("POP Error: Attempt to write to a read only memory sector");
+                            else
+                                memory[ds, (int)instruction.op1] = value;
                             break;
+
                     }
 
                     sp--;
@@ -269,7 +278,7 @@ namespace asmint
                         ss--;
                         if (ss < 0)
                         {
-                            Console.WriteLine("Nothing on stack!");
+                            Console.WriteLine("POP Error: While trying to decrement the stack pointer I arrived at the beggining of the memory");
                             return;
                         }
                     }
@@ -292,7 +301,7 @@ namespace asmint
                     cs +=1;
 
                     if (cs > 255)
-                        Console.WriteLine("Error! Out of Memory!");
+                        Console.WriteLine("Error: Ran out of memory while trying to increment the instruction pointer");
                 }
             }
 
