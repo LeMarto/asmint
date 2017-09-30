@@ -35,11 +35,11 @@ namespace asmint
 
         public enum flags_values
         {
-            zero=1,
-            carry=2,
+            carry=1,
+            zero=2,
             sign=4,
             overflow=8,
-            unused1=16,
+            parity=16,
             unused2=32,
             unused3=64,
             unused4=128
