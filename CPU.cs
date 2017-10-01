@@ -27,7 +27,8 @@ namespace asmint
     {
         mov,
         push,
-        pop
+        pop,
+        inc
     }
     
     public class CPU
@@ -349,6 +350,51 @@ namespace asmint
             
             registers[(int)enum_register.sp] = (byte)sp;
             registers[(int)enum_register.ss] = (byte)ss;
+        }
+
+        private void INC(Instruction instruction)
+        {
+            /*
+            INC op1
+            */
+            //Get the Data Segment value
+            int ds = registers[(int)enum_register.ds];
+            
+            int value=0;
+            
+            switch(instruction.op1_type)
+            {
+                case enum_op_type.register:
+                    value = registers[instruction.op1];
+                    break;
+                case enum_op_type.memory_address:
+                    //Make sure the position we re trying to move is not read only
+                    if(memory_readonly[ds, (int)instruction.op1] == true)
+                        Console.WriteLine("POP Error: Attempt to write to a read only memory sector");
+                    else
+                        value = memory[ds, (int)instruction.op1];
+                    break;
+
+            }
+            
+            value++;
+            if (value > Math.Pow(2, 8))
+            {
+                //overflow
+                flags = (byte)((int)flags | (int)flags_values.overflow);
+            }
+
+            switch(instruction.op1_type)
+            {
+                case enum_op_type.register:
+                    registers[instruction.op1] = (byte) value;
+                    break;
+                case enum_op_type.memory_address:
+                    memory[ds, (int)instruction.op1] = (byte) value;
+                    break;
+
+            }
+
         }
         #endregion
     }
