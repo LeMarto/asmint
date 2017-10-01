@@ -155,12 +155,6 @@ namespace asmint
             int cs = registers[(int)enum_register.cs];
             //Get Instruction Pointer value
             int ip = registers[(int)enum_register.ip];
-            //Get the Stack Segment value
-            int ss = registers[(int)enum_register.ss];
-            //Get the Stack Pointer value
-            int sp = registers[(int)enum_register.sp];
-            //Get the Default Segment value
-            int ds = registers[(int)enum_register.ds];
 
             //Store in a byte array the 32 bits instruction to be executed
             byte[] instruction_chunk = 
@@ -175,113 +169,22 @@ namespace asmint
             Instruction instruction = new Instruction(instruction_chunk);
 
             //Where well store temporally te value to manipulate
-            byte value=0;
 
             switch (instruction.op_code)
             {
                 //MOV op1, op2
                 case enum_op_code.mov:
-                    /*Use Base segment for memory operations!*/
-                    switch(instruction.op2_type)
-                    {
-                        case enum_op_type.constant:
-                            value = instruction.op2;
-                            break;
-                        case enum_op_type.register:
-                            value = registers[instruction.op2];
-                            break;
-                        case enum_op_type.memory_address:
-                            value = memory[ds,(int)instruction.op2];
-                            break;
-                    }
-
-                    switch(instruction.op1_type)
-                    {
-                        case enum_op_type.register: //move to a register
-                            registers[(int)instruction.op1] = value;
-                            break;
-                        case enum_op_type.memory_address: //move to a memory address
-                            if(memory_readonly[ds, (int)instruction.op1] == true)
-                                Console.WriteLine("MOV Error: Attempt to write to a read only memory sector");
-                            else
-                                memory[ds, (int)instruction.op1] = value;
-                            break;
-                        case enum_op_type.register_pointer: //move to a memory address stored in the following register
-                            if(memory_readonly[ds, registers[(int)instruction.op1]] == true)
-                                Console.WriteLine("MOV Error: Attempt to write to a read only memory sector");
-                            else
-                                memory[ds, registers[(int)instruction.op1]] = value;
-                            break;
-                    }
+                    MOV(instruction);
                     break;
                 
                 //PUSH op1
                 case enum_op_code.push:
-                    /*Use Base segment for memory operations! */
-                    switch(instruction.op1_type)
-                    {
-                        case enum_op_type.constant:
-                            value = instruction.op1;
-                            break;
-                        case enum_op_type.register:
-                            value = registers[instruction.op1];
-                            break;
-                        case enum_op_type.memory_address:
-                            value = memory[ds, (int)instruction.op1];
-                            break;
-                    }
-
-                    sp++;
-                    if (sp > 255)
-                    {
-                        sp = 0;
-                        ss++;
-                        if (ss > 255)
-                        {
-                            Console.WriteLine("PUSH Error: While trying to increment the stack pointer I arrived to the end of the memory");
-                            return;
-                        }
-                    }
-
-                    //If stack pointer points to a read only memory, error out
-                    if(memory_readonly[ss, sp] == true)
-                        Console.WriteLine("PUSH Error: Attempt to write to a read only memory sector");
-                    else
-                        memory[ss, sp] = value;
+                    PUSH(instruction);
                     break;
                 
                 //POP op1
                 case enum_op_code.pop:
-
-                    value = memory[ss, sp];
-                
-                    /*Use Base segment for memory operations! */
-                    switch(instruction.op1_type)
-                    {
-                        case enum_op_type.register:
-                            registers[instruction.op1] = value;
-                            break;
-                        case enum_op_type.memory_address:
-                            //Make sure the position we re trying to move is not read only
-                            if(memory_readonly[ds, (int)instruction.op1] == true)
-                                Console.WriteLine("POP Error: Attempt to write to a read only memory sector");
-                            else
-                                memory[ds, (int)instruction.op1] = value;
-                            break;
-
-                    }
-
-                    sp--;
-                    if (sp < 0)
-                    {
-                        sp = 255;
-                        ss--;
-                        if (ss < 0)
-                        {
-                            Console.WriteLine("POP Error: While trying to decrement the stack pointer I arrived at the beggining of the memory");
-                            return;
-                        }
-                    }
+                    POP(instruction);
                     break;
             }
 
@@ -308,9 +211,145 @@ namespace asmint
             //Update the registers
             registers[(int)enum_register.ip] = (byte)ip;
             registers[(int)enum_register.cs] = (byte)cs;
-            registers[(int)enum_register.sp] = (byte)sp;
-            registers[(int)enum_register.ss] = (byte)ss; 
         }
 
+        #region Operations
+        private void MOV(Instruction instruction)
+        {
+            /*
+            MOV op1, op2
+            */
+            byte value=0;
+            //Get the Data Segment value
+            int ds = registers[(int)enum_register.ds];
+
+            switch(instruction.op2_type)
+            {
+                case enum_op_type.constant:
+                    value = instruction.op2;
+                    break;
+                case enum_op_type.register:
+                    value = registers[instruction.op2];
+                    break;
+                case enum_op_type.memory_address:
+                    value = memory[ds,(int)instruction.op2];
+                    break;
+            }
+
+            switch(instruction.op1_type)
+            {
+                case enum_op_type.register: //move to a register
+                    registers[(int)instruction.op1] = value;
+                    break;
+                case enum_op_type.memory_address: //move to a memory address
+                    if(memory_readonly[ds, (int)instruction.op1] == true)
+                        Console.WriteLine("MOV Error: Attempt to write to a read only memory sector");
+                    else
+                        memory[ds, (int)instruction.op1] = value;
+                    break;
+                case enum_op_type.register_pointer: //move to a memory address stored in the following register
+                    if(memory_readonly[ds, registers[(int)instruction.op1]] == true)
+                        Console.WriteLine("MOV Error: Attempt to write to a read only memory sector");
+                    else
+                        memory[ds, registers[(int)instruction.op1]] = value;
+                    break;
+            }
+        }
+        
+        private void PUSH(Instruction instruction)
+        {
+            /*
+            PUSH op1
+            */
+            byte value=0;
+            //Get the Data Segment value
+            int ds = registers[(int)enum_register.ds];
+            //Get the Stack Segment value
+            int ss = registers[(int)enum_register.ss];
+            //Get the Stack Pointer value
+            int sp = registers[(int)enum_register.sp];
+            /*Use Base segment for memory operations! */
+
+            switch(instruction.op1_type)
+            {
+                case enum_op_type.constant:
+                    value = instruction.op1;
+                    break;
+                case enum_op_type.register:
+                    value = registers[instruction.op1];
+                    break;
+                case enum_op_type.memory_address:
+                    value = memory[ds, (int)instruction.op1];
+                    break;
+            }
+
+            sp++;
+            if (sp > 255)
+            {
+                sp = 0;
+                ss++;
+                if (ss > 255)
+                {
+                    Console.WriteLine("PUSH Error: While trying to increment the stack pointer I arrived to the end of the memory");
+                    return;
+                }
+            }
+
+            //If stack pointer points to a read only memory, error out
+            if(memory_readonly[ss, sp] == true)
+                Console.WriteLine("PUSH Error: Attempt to write to a read only memory sector");
+            else
+                memory[ss, sp] = value;
+            
+            registers[(int)enum_register.sp] = (byte)sp;
+            registers[(int)enum_register.ss] = (byte)ss;
+        }
+
+        private void POP(Instruction instruction)
+        {
+            /*
+            POP op1
+            */
+            byte value=0;
+            //Get the Data Segment value
+            int ds = registers[(int)enum_register.ds];
+            //Get the Stack Segment value
+            int ss = registers[(int)enum_register.ss];
+            //Get the Stack Pointer value
+            int sp = registers[(int)enum_register.sp];
+
+            value = memory[ss, sp];
+
+            switch(instruction.op1_type)
+            {
+                case enum_op_type.register:
+                    registers[instruction.op1] = value;
+                    break;
+                case enum_op_type.memory_address:
+                    //Make sure the position we re trying to move is not read only
+                    if(memory_readonly[ds, (int)instruction.op1] == true)
+                        Console.WriteLine("POP Error: Attempt to write to a read only memory sector");
+                    else
+                        memory[ds, (int)instruction.op1] = value;
+                    break;
+
+            }
+
+            sp--;
+            if (sp < 0)
+            {
+                sp = 255;
+                ss--;
+                if (ss < 0)
+                {
+                    Console.WriteLine("POP Error: While trying to decrement the stack pointer I arrived at the beggining of the memory");
+                    return;
+                }
+            }
+            
+            registers[(int)enum_register.sp] = (byte)sp;
+            registers[(int)enum_register.ss] = (byte)ss;
+        }
+        #endregion
     }
 }
