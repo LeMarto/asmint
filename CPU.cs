@@ -41,7 +41,7 @@ namespace asmint
             zero=2,
             sign=4,
             overflow=8,
-            parity=16,
+            unused1=16,
             unused2=32,
             unused3=64,
             unused4=128
@@ -350,6 +350,7 @@ namespace asmint
             /*
             INC op1
             */
+            
             //Get the Data Segment value
             int ds = registers[(int)enum_register.ds];
             
@@ -363,7 +364,7 @@ namespace asmint
                 case enum_op_type.memory_address:
                     //Make sure the position we re trying to move is not read only
                     if(memory_readonly[ds, (int)instruction.op1] == true)
-                        throw new CPUReadOnlyMemoryException("POP Error: Attempt to write to a read only memory sector.");
+                        throw new CPUReadOnlyMemoryException("INC Error: Attempt to write to a read only memory sector.");
                     else
                         value = memory[ds, (int)instruction.op1];
                     break;
@@ -377,7 +378,6 @@ namespace asmint
                 //overflow
                 flags = (byte)((int)flags | (int)flags_values.overflow);
             }
-
             
             switch(instruction.op1_type)
             {
@@ -387,9 +387,57 @@ namespace asmint
                 case enum_op_type.memory_address:
                     memory[ds, (int)instruction.op1] = (byte) value;
                     break;
+            }
+        }
+        private void DEC(Instruction instruction)
+        {
+            /*
+            DEC op1
+            */
+            
+            //Get the Data Segment value
+            int ds = registers[(int)enum_register.ds];
+            
+            int value=0;
+
+            switch(instruction.op1_type)
+            {
+                case enum_op_type.register:
+                    value = registers[instruction.op1];
+                    break;
+                case enum_op_type.memory_address:
+                    //Make sure the position we re trying to move is not read only
+                    if(memory_readonly[ds, (int)instruction.op1] == true)
+                        throw new CPUReadOnlyMemoryException("DEC Error: Attempt to write to a read only memory sector.");
+                    else
+                        value = memory[ds, (int)instruction.op1];
+                    break;
 
             }
+            
+            value--;
+            
+            if (value < 0)
+            {
+                //overflow
+                flags = (byte)((int)flags | (int)flags_values.overflow);
+            }
 
+            if (value == 0)
+            {
+                //zero
+                flags = (byte)((int)flags | (int)flags_values.zero);
+            }
+            
+            switch(instruction.op1_type)
+            {
+                case enum_op_type.register:
+                    registers[instruction.op1] = (byte) value;
+                    break;
+                case enum_op_type.memory_address:
+                    memory[ds, (int)instruction.op1] = (byte) value;
+                    break;
+            }
         }
         #endregion
     }
