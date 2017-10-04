@@ -29,7 +29,8 @@ namespace asmint
         mov,
         push,
         pop,
-        inc
+        inc,
+        dec
     }
     
     public class CPU
@@ -48,6 +49,13 @@ namespace asmint
         }
         public byte flags;
         private bool program_ended = false; //set to true when the program finished.
+        public bool EOP
+        {
+            get
+            {
+                return program_ended;
+            }
+        }
         public byte[] registers = new byte[256];
         public byte[,] memory = new byte[256,256];
         public bool[,] memory_readonly = new bool[256,256];
@@ -185,6 +193,16 @@ namespace asmint
                 //POP op1
                 case enum_op_code.pop:
                     POP(instruction);
+                    break;
+
+                //INC op1
+                case enum_op_code.inc:
+                    INC(instruction);
+                    break;
+
+                //DEC op1
+                case enum_op_code.dec:
+                    DEC(instruction);
                     break;
             }
 
