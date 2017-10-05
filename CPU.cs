@@ -391,11 +391,11 @@ namespace asmint
             
             value++;
             
-            if (value > Math.Pow(2, 8) - 1)
-            {
-                //overflow
+            //Overflow flag ON because of the negative representation
+            if (value > Math.Pow(2, 7) - 1)
                 flags = (byte)((int)flags | (int)flags_values.overflow);
-            }
+            else //overflow flag OFF
+                flags = (byte)((int)flags & ~(int)flags_values.overflow);
             
             switch(instruction.op1_type)
             {
@@ -430,23 +430,16 @@ namespace asmint
                     else
                         value = memory[ds, (int)instruction.op1];
                     break;
-
             }
             
             value--;
             
-            if (value < 0)
-            {
-                //overflow
-                flags = (byte)((int)flags | (int)flags_values.overflow);
-            }
-
-            if (value == 0)
-            {
-                //zero
+            if (value == 0) //zero flag ON
                 flags = (byte)((int)flags | (int)flags_values.zero);
-            }
-            
+
+            else if (value > 0) //zero flag OFF
+                flags = (byte)((int)flags & ~(int)flags_values.zero);
+
             switch(instruction.op1_type)
             {
                 case enum_op_type.register:
