@@ -391,12 +391,27 @@ namespace asmint
             
             value++;
             
+            /*
+                Because we are incrementing op1 by 1, "op2" always = 1
+                or 0000 0001. The 8th bit will always be 0.
+
+                That means that the only variables are operand 1
+                and the result after the increment.
+
+                The 2 situations where overflow flag should be true are:
+                [ ]op1 negative, op2 negative, result positive <- Never possible, because op2 always positive.
+                [X]op1 positive, op2 positive, result negative
+            */
+
+            bool op1_negative = (128 & (int)instruction.op1) == 128;
+            bool value_negative = (128 & value) == 128;
+
             //Overflow flag ON because of the negative representation
-            if (value > Math.Pow(2, 7) - 1)
+            if (!op1_negative && value_negative)
                 flags = (byte)((int)flags | (int)flags_values.overflow);
             else //overflow flag OFF
                 flags = (byte)((int)flags & ~(int)flags_values.overflow);
-            
+
             switch(instruction.op1_type)
             {
                 case enum_op_type.register:
@@ -433,7 +448,27 @@ namespace asmint
             }
             
             value--;
-            
+            /*
+                Because we are decrementing op1 by 1, "op2" always = 1
+                or 0000 0001. The 8th bit will always be 0.
+
+                That means that the only variables are operand 1
+                and the result after the decrement.
+
+                The 2 situations where overflow flag should be true are:
+                [ ]op1 positive, op2 negative, result negative <- Never possible, because op2 always positive.
+                [X]op1 negative, op2 positive, result positive
+            */
+
+            bool op1_negative = (128 & (int)instruction.op1) == 128;
+            bool value_negative = (128 & value) == 128;
+
+            //Overflow flag ON because of the negative representation
+            if (op1_negative && !value_negative)
+                flags = (byte)((int)flags | (int)flags_values.overflow);
+            else //overflow flag OFF
+                flags = (byte)((int)flags & ~(int)flags_values.overflow);
+
             if (value == 0) //zero flag ON
                 flags = (byte)((int)flags | (int)flags_values.zero);
 
